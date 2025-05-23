@@ -1,0 +1,119 @@
+Function NomeDaCor(corRGB As Long) As String
+    Dim r As Long, g As Long, b As Long
+    r = corRGB Mod 256
+    g = (corRGB \ 256) Mod 256
+    b = (corRGB \ 65536) Mod 256
+
+    Select Case True
+        Case r = 255 And g = 255 And b = 255: NomeDaCor = "Branco"
+        Case r = 0 And g = 0 And b = 0: NomeDaCor = "Preto"
+        Case r = 255 And g = 0 And b = 0: NomeDaCor = "Vermelho"
+        Case r = 0 And g = 255 And b = 0: NomeDaCor = "Verde"
+        Case r = 0 And g = 0 And b = 255: NomeDaCor = "Azul"
+        Case r = 255 And g = 255 And b = 0: NomeDaCor = "Amarelo"
+        Case r = 0 And g = 255 And b = 255: NomeDaCor = "Ciano"
+        Case r = 255 And g = 0 And b = 255: NomeDaCor = "Magenta"
+        Case r = 128 And g = 128 And b = 128: NomeDaCor = "Cinza"
+        Case r = 192 And g = 192 And b = 192: NomeDaCor = "Cinza claro"
+        Case r = 128 And g = 0 And b = 0: NomeDaCor = "Bordô"
+        Case r = 128 And g = 128 And b = 0: NomeDaCor = "Oliva"
+        Case r = 0 And g = 128 And b = 0: NomeDaCor = "Verde escuro"
+        Case r = 128 And g = 0 And b = 128: NomeDaCor = "Roxo"
+        Case r = 0 And g = 128 And b = 128: NomeDaCor = "Azul petróleo"
+        Case r = 0 And g = 0 And b = 128: NomeDaCor = "Azul escuro"
+        Case Else: NomeDaCor = "Desconhecida"
+    End Select
+
+    NomeDaCor = NomeDaCor & " (RGB: " & r & ", " & g & ", " & b & ")"
+End Function
+
+Sub CompararPlanilhasComRelatorio()
+    Dim wb1 As Workbook, wb2 As Workbook
+    Dim ws1 As Worksheet, ws2 As Worksheet
+    Dim cel1 As Range, cel2 As Range
+    Dim r As Long, c As Long
+    Dim maxRow As Long, maxCol As Long
+    Dim relatorio As Worksheet
+    Dim linhaRelatorio As Long
+
+    Set wb1 = Workbooks("Arquivo 07 05 2025.xlsx")
+    Set wb2 = Workbooks("Arquivo 08 05 2025.xlsx")
+    Set ws1 = wb1.Sheets(1)
+    Set ws2 = wb2.Sheets(1)
+
+    ' Criar aba de relatório
+    Application.DisplayAlerts = False
+    On Error Resume Next
+    wb2.Sheets("Relatório de Alterações").Delete
+    On Error GoTo 0
+    Application.DisplayAlerts = True
+
+    Set relatorio = wb2.Sheets.Add
+    relatorio.Name = "Relatório de Alterações"
+    relatorio.Range("A1:D1").Value = Array("Célula", "Tipo de Alteração", "Valor Original", "Valor Atual")
+    linhaRelatorio = 2
+
+    maxRow = Application.WorksheetFunction.Max(ws1.UsedRange.Rows.Count, ws2.UsedRange.Rows.Count)
+    maxCol = Application.WorksheetFunction.Max(ws1.UsedRange.Columns.Count, ws2.UsedRange.Columns.Count)
+
+    For r = 1 To maxRow
+        For c = 1 To maxCol
+            Set cel1 = ws1.Cells(r, c)
+            Set cel2 = ws2.Cells(r, c)
+            Dim endereco As String: endereco = cel2.Address(False, False)
+
+            ' Valor diferente
+            If cel1.Value <> cel2.Value Then
+                relatorio.Cells(linhaRelatorio, 1).Value = endereco
+                relatorio.Cells(linhaRelatorio, 2).Value = "Valor diferente"
+                relatorio.Cells(linhaRelatorio, 3).Value = cel1.Value
+                relatorio.Cells(linhaRelatorio, 4).Value = cel2.Value
+                cel2.Interior.Color = RGB(153, 102, 0)
+                linhaRelatorio = linhaRelatorio + 1
+            End If
+
+            ' Cor de fundo diferente
+            If cel1.Interior.Color <> cel2.Interior.Color Then
+                relatorio.Cells(linhaRelatorio, 1).Value = endereco
+                relatorio.Cells(linhaRelatorio, 2).Value = "Cor de fundo diferente"
+                relatorio.Cells(linhaRelatorio, 3).Value = NomeDaCor(cel1.Interior.Color)
+                relatorio.Cells(linhaRelatorio, 4).Value = NomeDaCor(cel2.Interior.Color)
+                cel2.Interior.Color = RGB(102, 0, 153)
+                linhaRelatorio = linhaRelatorio + 1
+            End If
+
+            ' Cor da fonte diferente
+            If cel1.Font.Color <> cel2.Font.Color Then
+                relatorio.Cells(linhaRelatorio, 1).Value = endereco
+                relatorio.Cells(linhaRelatorio, 2).Value = "Cor da fonte diferente"
+                relatorio.Cells(linhaRelatorio, 3).Value = NomeDaCor(cel1.Font.Color)
+                relatorio.Cells(linhaRelatorio, 4).Value = NomeDaCor(cel2.Font.Color)
+                cel2.Interior.Color = RGB(64, 64, 64)
+                linhaRelatorio = linhaRelatorio + 1
+            End If
+
+            ' Célula nova
+            If IsEmpty(cel1.Value) And Not IsEmpty(cel2.Value) Then
+                relatorio.Cells(linhaRelatorio, 1).Value = endereco
+                relatorio.Cells(linhaRelatorio, 2).Value = "Célula adicionada"
+                relatorio.Cells(linhaRelatorio, 3).Value = ""
+                relatorio.Cells(linhaRelatorio, 4).Value = cel2.Value
+                cel2.Interior.Color = RGB(102, 51, 0)
+                linhaRelatorio = linhaRelatorio + 1
+            End If
+
+            ' Célula removida
+            If Not IsEmpty(cel1.Value) And IsEmpty(cel2.Value) Then
+                relatorio.Cells(linhaRelatorio, 1).Value = endereco
+                relatorio.Cells(linhaRelatorio, 2).Value = "Célula removida"
+                relatorio.Cells(linhaRelatorio, 3).Value = cel1.Value
+                relatorio.Cells(linhaRelatorio, 4).Value = ""
+                cel2.Interior.Color = RGB(102, 51, 0)
+                linhaRelatorio = linhaRelatorio + 1
+            End If
+        Next c
+    Next r
+
+    MsgBox "Análise concluída. Verifique a aba 'Relatório de Alterações'."
+
+End Sub
